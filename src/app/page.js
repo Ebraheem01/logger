@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/app/contexts/AuthContext'
+import Auth from '@/app/components/Auth'
 import { format, startOfWeek, addDays, eachDayOfInterval, subWeeks, subDays } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
@@ -10,10 +12,12 @@ import EntryForm from '@/app/components/EntryForm'
 import EntryList from '@/app/components/EntryList'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
+import { loadEntries, saveEntries } from '@/app/utils/storage'
 
 const formatDate = (date) => format(date, 'yyyy-MM-dd')
 
 export default function Home() {
+
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [allEntries, setAllEntries] = useState({})
   const [weeklyReportOpen, setWeeklyReportOpen] = useState(false)
@@ -22,15 +26,11 @@ export default function Home() {
   const [achievements, setAchievements] = useState([])
 
   useEffect(() => {
-    const storedAllEntries = localStorage.getItem('allEntries')
-    if (storedAllEntries) {
-      try {
-        setAllEntries(JSON.parse(storedAllEntries))
-      } catch (error) {
-        console.error('Error parsing stored entries:', error)
-        setAllEntries({})
-      }
+    const fetchEntries = async () => {
+      const entries = await loadEntries()
+      setAllEntries(entries.data || {})
     }
+    fetchEntries()
   }, [])
 
   useEffect(() => {
@@ -52,14 +52,14 @@ export default function Home() {
     setStreak(currentStreak)
   }, [allEntries])
 
-  const addEntry = useCallback((newEntry) => {
+  const addEntry = useCallback(async (newEntry) => {
     const dateKey = formatDate(selectedDate)
     const updatedEntries = {
       ...allEntries,
       [dateKey]: [...(allEntries[dateKey] || []), newEntry]
     }
     setAllEntries(updatedEntries)
-    localStorage.setItem('allEntries', JSON.stringify(updatedEntries))
+    await saveEntries(updatedEntries)
   }, [allEntries, selectedDate])
 
   const handleDateSelect = useCallback((date) => {
