@@ -13,6 +13,7 @@ import EntryList from '@/app/components/EntryList'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { loadEntries, saveEntries } from '@/app/utils/storage'
+import Stat from '@/app/components/Stat'
 
 const formatDate = (date) => format(date, 'yyyy-MM-dd')
 
@@ -91,120 +92,49 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-foreground">Dev Logger</h1>
-          <Button variant="outline" onClick={() => setWeeklyReportOpen(true)}>
-            View Weekly Report
-          </Button>
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold">Welcome to DevLog</h1>
+        <div className="flex gap-8 mt-4">
+          <Stat label="Streak" value={`${streak} days`} icon="🔥" />
+          <Stat label="Total Entries" value={Object.values(allEntries).flat().length} icon="📝" />
+          <Stat label="This Week" value={weeklyReportData.length} icon="📊" />
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Select Date</CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-2xl">Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomCalendar
+              onDateSelect={handleDateSelect}
+              onTuesdayDoubleClick={handleTuesdayDoubleClick}
+              entries={allEntries}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="space-y-8">
+          <Card className="shadow-card">
+            <CardHeader className="border-b border-muted pb-4">
+              <CardTitle>Add Entry for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <CustomCalendar
-                onDateSelect={handleDateSelect}
-                onTuesdayDoubleClick={handleTuesdayDoubleClick}
-                entries={allEntries}
-              />
+            <CardContent className="pt-6">
+              <EntryForm addEntry={addEntry} />
             </CardContent>
           </Card>
 
-          <div className="space-y-8">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Add Entry for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <EntryForm addEntry={addEntry} />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Entries for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <EntryList entries={allEntries[formatDate(selectedDate)] || []} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="bg-card p-4 rounded-lg">
-            <div className="text-2xl font-bold">🔥 {streak}</div>
-            <div className="text-sm text-muted-foreground">Day Streak</div>
-          </div>
-          <div className="bg-card p-4 rounded-lg">
-            <div className="text-2xl font-bold">
-              {Object.values(allEntries).flat().length}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Entries</div>
-          </div>
-          <div className="bg-card p-4 rounded-lg">
-            <div className="text-2xl font-bold">
-              {achievements.length}
-            </div>
-            <div className="text-sm text-muted-foreground">Achievements</div>
-          </div>
+          <Card className="shadow-card">
+            <CardHeader className="border-b border-muted pb-4">
+              <CardTitle>Today's Entries</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <EntryList entries={allEntries[formatDate(selectedDate)] || []} />
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      <Dialog open={weeklyReportOpen} onOpenChange={setWeeklyReportOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Weekly Report</DialogTitle>
-          </DialogHeader>
-          {weeklyReportData.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
-              No entries found for this week
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {weeklyReportData.map((entry, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell>{entry.description}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          entry.status === 'completed' ? 'default' :
-                            entry.status === 'blocked' ? 'destructive' :
-                              'secondary'
-                        }
-                      >
-                        {entry.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {entry.tags.map((tag, i) => (
-                        <Badge key={i} variant="outline" className="mr-1">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </TableCell>
-                    <TableCell>{entry.formattedTime}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
