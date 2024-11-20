@@ -1,101 +1,210 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { format, startOfWeek, addDays, eachDayOfInterval, subWeeks, subDays } from 'date-fns'
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table'
+import CustomCalendar from '@/app/components/CustomCalendar'
+import EntryForm from '@/app/components/EntryForm'
+import EntryList from '@/app/components/EntryList'
+import { Button } from '@/app/components/ui/button'
+import { Badge } from '@/app/components/ui/badge'
+
+const formatDate = (date) => format(date, 'yyyy-MM-dd')
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [allEntries, setAllEntries] = useState({})
+  const [weeklyReportOpen, setWeeklyReportOpen] = useState(false)
+  const [weeklyReportData, setWeeklyReportData] = useState([])
+  const [streak, setStreak] = useState(0)
+  const [achievements, setAchievements] = useState([])
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const storedAllEntries = localStorage.getItem('allEntries')
+    if (storedAllEntries) {
+      try {
+        setAllEntries(JSON.parse(storedAllEntries))
+      } catch (error) {
+        console.error('Error parsing stored entries:', error)
+        setAllEntries({})
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const lastEntry = Object.entries(allEntries)
+      .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))[0]
+
+    // Calculate streak
+    let currentStreak = 0
+    const today = new Date()
+    let checkDate = today
+
+    while (true) {
+      const dateKey = format(checkDate, 'yyyy-MM-dd')
+      if (!allEntries[dateKey]) break
+      currentStreak++
+      checkDate = subDays(checkDate, 1)
+    }
+
+    setStreak(currentStreak)
+  }, [allEntries])
+
+  const addEntry = useCallback((newEntry) => {
+    const dateKey = formatDate(selectedDate)
+    const updatedEntries = {
+      ...allEntries,
+      [dateKey]: [...(allEntries[dateKey] || []), newEntry]
+    }
+    setAllEntries(updatedEntries)
+    localStorage.setItem('allEntries', JSON.stringify(updatedEntries))
+  }, [allEntries, selectedDate])
+
+  const handleDateSelect = useCallback((date) => {
+    setSelectedDate(date)
+  }, [])
+
+  const handleTuesdayDoubleClick = useCallback((day) => {
+    const currentWeekMonday = startOfWeek(day, { weekStartsOn: 1 })
+    const previousWeekMonday = subWeeks(currentWeekMonday, 1)
+    const nextMonday = addDays(currentWeekMonday, 0)
+
+    const weekDays = eachDayOfInterval({
+      start: previousWeekMonday,
+      end: nextMonday
+    })
+
+    const weekEntries = weekDays.flatMap(date => {
+      const dateKey = format(date, 'yyyy-MM-dd')
+      return (allEntries[dateKey] || []).map(entry => ({
+        ...entry,
+        date: format(date, 'MMM dd, yyyy'),
+        formattedTime: new Date(entry.timestamp).toLocaleTimeString()
+      }))
+    })
+
+    setWeeklyReportData(weekEntries)
+    setWeeklyReportOpen(true)
+  }, [allEntries])
+
+  return (
+    <div className="min-h-screen bg-background p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold text-foreground">Dev Logger</h1>
+          <Button variant="outline" onClick={() => setWeeklyReportOpen(true)}>
+            View Weekly Report
+          </Button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Select Date</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomCalendar
+                onDateSelect={handleDateSelect}
+                onTuesdayDoubleClick={handleTuesdayDoubleClick}
+                entries={allEntries}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="space-y-8">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Add Entry for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EntryForm addEntry={addEntry} />
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Entries for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EntryList entries={allEntries[formatDate(selectedDate)] || []} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="bg-card p-4 rounded-lg">
+            <div className="text-2xl font-bold">🔥 {streak}</div>
+            <div className="text-sm text-muted-foreground">Day Streak</div>
+          </div>
+          <div className="bg-card p-4 rounded-lg">
+            <div className="text-2xl font-bold">
+              {Object.values(allEntries).flat().length}
+            </div>
+            <div className="text-sm text-muted-foreground">Total Entries</div>
+          </div>
+          <div className="bg-card p-4 rounded-lg">
+            <div className="text-2xl font-bold">
+              {achievements.length}
+            </div>
+            <div className="text-sm text-muted-foreground">Achievements</div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={weeklyReportOpen} onOpenChange={setWeeklyReportOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Weekly Report</DialogTitle>
+          </DialogHeader>
+          {weeklyReportData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              No entries found for this week
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {weeklyReportData.map((entry, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{entry.date}</TableCell>
+                    <TableCell>{entry.description}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          entry.status === 'completed' ? 'default' :
+                            entry.status === 'blocked' ? 'destructive' :
+                              'secondary'
+                        }
+                      >
+                        {entry.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {entry.tags.map((tag, i) => (
+                        <Badge key={i} variant="outline" className="mr-1">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </TableCell>
+                    <TableCell>{entry.formattedTime}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }
