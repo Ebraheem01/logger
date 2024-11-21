@@ -11,32 +11,34 @@ export default function EntryList({ entries }) {
     }
 
     return (
-        <ul className="space-y-4">
-            {entries.map((entry, index) => (
-                <li key={index} className="bg-muted/50 rounded-xl p-4 transition-all hover:bg-muted">
-                    <p className="font-medium text-foreground">{entry.description}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                        <Badge
-                            variant={
-                                entry.status === 'completed' ? 'default' :
-                                    entry.status === 'blocked' ? 'destructive' :
-                                        'secondary'
-                            }
-                            className="capitalize"
-                        >
-                            {entry.status}
-                        </Badge>
-                        {entry.tags.map((tag, tagIndex) => (
-                            <Badge key={tagIndex} variant="outline" className="bg-background/50">
-                                {tag}
+        <div className="max-h-[400px] overflow-y-auto pr-2">
+            <ul className="space-y-4">
+                {entries.map((entry, index) => (
+                    <li key={index} className="bg-muted/50 rounded-xl p-4 transition-all hover:bg-muted">
+                        <p className="font-medium text-foreground">{entry.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                            <Badge
+                                variant={
+                                    entry.status === 'completed' ? 'default' :
+                                        entry.status === 'blocked' ? 'destructive' :
+                                            'secondary'
+                                }
+                                className="capitalize"
+                            >
+                                {entry.status}
                             </Badge>
-                        ))}
-                    </div>
-                    <time className="block text-sm text-muted-foreground mt-2">
-                        {new Date(entry.timestamp).toLocaleTimeString()}
-                    </time>
-                </li>
-            ))}
-        </ul>
+                            {entry.tags.map((tag, tagIndex) => (
+                                <Badge key={tagIndex} variant="outline" className="bg-background/50">
+                                    {tag}
+                                </Badge>
+                            ))}
+                        </div>
+                        <time className="block text-sm text-muted-foreground mt-2">
+                            {new Date(entry.timestamp).toLocaleTimeString()}
+                        </time>
+                    </li>
+                ))}
+            </ul>
+        </div>
     )
 }

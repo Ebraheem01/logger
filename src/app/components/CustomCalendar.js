@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isTuesday, startOfWeek, addDays, addMonths, endOfWeek } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isTuesday, startOfWeek, addDays, addMonths, endOfWeek, isFriday } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 
 const MemoizedEntryList = React.memo(EntryList)
 
-export default function CustomCalendar({ onDateSelect, onTuesdayDoubleClick, entries }) {
+export default function CustomCalendar({ onDateSelect, onDayDoubleClick, entries }) {
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState(new Date())
 
@@ -24,14 +24,13 @@ export default function CustomCalendar({ onDateSelect, onTuesdayDoubleClick, ent
         onDateSelect(day)
     }, [onDateSelect])
 
-    const handleTuesdayDoubleClick = useCallback((day, e) => {
+    const handleDoubleClick = useCallback((day, e) => {
         e.preventDefault()
         e.stopPropagation()
-        console.log('day', day)
-        if (isTuesday(day)) {
-            onTuesdayDoubleClick(day)
+        if (isTuesday(day) || isFriday(day)) {
+            onDayDoubleClick(day)
         }
-    }, [onTuesdayDoubleClick])
+    }, [onDayDoubleClick])
 
     const nextMonth = () => {
         setCurrentMonth(addMonths(currentMonth, 1))
@@ -62,31 +61,26 @@ export default function CustomCalendar({ onDateSelect, onTuesdayDoubleClick, ent
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
-            <div className="calendar-grid">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center font-medium text-sm text-muted-foreground">
-                        {day}
-                    </div>
-                ))}
-                {calendarDays.map(day => {
+            <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day, dayIdx) => {
                     const dateKey = format(day, 'yyyy-MM-dd')
-                    const dayEntries = entries && entries[dateKey] ? entries[dateKey] : []
-                    const isSelected = isSameDay(day, selectedDate)
-                    const isCurrentMonth = isSameMonth(day, currentMonth)
+                    const dayEntries = entries[dateKey] || []
 
                     return (
                         <Popover key={day.toString()}>
                             <PopoverTrigger asChild>
-                                <button
+                                <Button
+                                    variant="ghost"
                                     className={cn(
-                                        "calendar-day",
-                                        !isCurrentMonth && "text-muted-foreground/50",
-                                        isSelected && "selected",
-                                        isToday(day) && "today",
-                                        isTuesday(day) && "bg-yellow-100/50"
+                                        "h-14 w-full p-0 font-normal relative",
+                                        !isSameMonth(day, currentMonth) && "text-muted-foreground",
+                                        isSameDay(day, selectedDate) && "bg-primary text-primary-foreground",
+                                        isToday(day) && "bg-muted",
+                                        dayEntries.length > 0 && "font-semibold",
+                                        (isTuesday(day) || isFriday(day)) && "cursor-pointer hover:bg-muted/80"
                                     )}
                                     onClick={() => handleDateClick(day)}
-                                    onDoubleClick={(e) => handleTuesdayDoubleClick(day, e)}
+                                    onDoubleClick={(e) => handleDoubleClick(day, e)}
                                 >
                                     <span className="text-sm">{format(day, 'd')}</span>
                                     {dayEntries.length > 0 && (
@@ -95,7 +89,7 @@ export default function CustomCalendar({ onDateSelect, onTuesdayDoubleClick, ent
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                         </span>
                                     )}
-                                </button>
+                                </Button>
                             </PopoverTrigger>
                             {dayEntries.length > 0 && (
                                 <PopoverContent className="w-80 p-0" align="start">

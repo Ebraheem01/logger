@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/app/contexts/AuthContext'
 import Auth from '@/app/components/Auth'
-import { format, startOfWeek, addDays, eachDayOfInterval, subWeeks, subDays } from 'date-fns'
+import { format, startOfWeek, addDays, eachDayOfInterval, subWeeks, subDays, isFriday, isTuesday } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table'
@@ -67,28 +67,48 @@ export default function Home() {
     setSelectedDate(date)
   }, [])
 
-  const handleTuesdayDoubleClick = useCallback((day) => {
-    const currentWeekMonday = startOfWeek(day, { weekStartsOn: 1 })
-    const previousWeekMonday = subWeeks(currentWeekMonday, 1)
-    const nextMonday = addDays(currentWeekMonday, 0)
 
-    const weekDays = eachDayOfInterval({
-      start: previousWeekMonday,
-      end: nextMonday
-    })
+  const generateWeeklyReport = useCallback((entries, startDate, endDate) => {
+    const weekEntries = []
+    let currentDate = startDate
 
-    const weekEntries = weekDays.flatMap(date => {
-      const dateKey = format(date, 'yyyy-MM-dd')
-      return (allEntries[dateKey] || []).map(entry => ({
-        ...entry,
-        date: format(date, 'MMM dd, yyyy'),
-        formattedTime: new Date(entry.timestamp).toLocaleTimeString()
-      }))
-    })
+    while (currentDate <= endDate) {
+      const dateKey = format(currentDate, 'yyyy-MM-dd')
+      if (entries[dateKey]) {
+        weekEntries.push(...entries[dateKey].map(entry => ({
+          ...entry,
+          date: dateKey
+        })))
+      }
+      currentDate = addDays(currentDate, 1)
+    }
 
+    return weekEntries.sort((a, b) => new Date(a.date) - new Date(b.date))
+  }, [])
+
+  const handleDayDoubleClick = useCallback((day) => {
+    let reportStart, reportEnd;
+    console.log(day)
+    if (isFriday(day)) {
+      // For Fridays, show Monday-Friday of the same week
+      reportStart = startOfWeek(day, { weekStartsOn: 1 }) // Monday
+      reportEnd = day // Friday
+    } else if (isTuesday(day)) {
+      // For Tuesdays, show previous week
+      const currentWeekMonday = startOfWeek(day, { weekStartsOn: 1 })
+      reportStart = subWeeks(currentWeekMonday, 1)
+      reportEnd = subDays(currentWeekMonday, 1)
+    } else {
+      return // Only respond to Tuesday/Friday double clicks
+    }
+
+    const weekEntries = generateWeeklyReport(allEntries, reportStart, reportEnd)
+    console.log(weekEntries)
     setWeeklyReportData(weekEntries)
     setWeeklyReportOpen(true)
   }, [allEntries])
+
+
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -109,7 +129,7 @@ export default function Home() {
           <CardContent>
             <CustomCalendar
               onDateSelect={handleDateSelect}
-              onTuesdayDoubleClick={handleTuesdayDoubleClick}
+              onDayDoubleClick={handleDayDoubleClick}
               entries={allEntries}
             />
           </CardContent>
@@ -135,6 +155,39 @@ export default function Home() {
           </Card>
         </div>
       </div>
+
+
+      <Dialog open={weeklyReportOpen} onOpenChange={setWeeklyReportOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Weekly Report</DialogTitle>
+          </DialogHeader>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {weeklyReportData.map((entry, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{format(new Date(entry.date), 'MMM d')}</TableCell>
+                    <TableCell>{entry.type}</TableCell>
+                    <TableCell>{entry.description}</TableCell>
+                    <TableCell>{entry.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }
